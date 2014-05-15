@@ -4,7 +4,6 @@
 trim(String) ->
     string:strip(String).
 
-
 appendGUID(String) ->
     string:concat(String, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").
 
@@ -23,7 +22,9 @@ getKey(Str) ->
     Packet = erlang:decode_packet(http, Bin ,[]),
     case Packet of
       {ok, {http_request, 'GET', _, _}, Fields} ->
-        getKeyHeader(Fields)
+        getKeyHeader(Fields);
+      _ ->
+        throw(nohttp)
     end.
 
 getKeyHeader(Bin) ->
@@ -33,7 +34,9 @@ getKeyHeader(Bin) ->
     {ok, {http_header,_,"Sec-Websocket-Key",_,Key},_} ->
       Key;
     {ok, {http_header,_,_,_,_}, More} ->
-      getKeyHeader(More)
+      getKeyHeader(More);
+    _ ->
+      throw(noheader)
   end.
 
 handshake(Bin) ->

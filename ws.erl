@@ -1,28 +1,40 @@
 -module(ws).
--compile(export_all).
+-export([ws_init/1, ws_send/3, ws_recv/1]).
 
-
-start() ->
-  io:format("Server started!~n"),
-  {ok, LSock} = gen_tcp:listen(5678, [list, {packet, 0},{active, false}]),
-  server_loop(LSock).
-
-server_loop(LSock) ->
-  {ok, Sock} = gen_tcp:accept(LSock),
-  client_loop(Sock,0).
-
-client_loop(Sock, HS) ->
+ws_init(Sock) ->
   case gen_tcp:recv(Sock, 0) of
-    {ok, B} ->
-      if
-        HS == 1  ->
-          {_, text, R} = ws_framing:parseMsg(list_to_binary(B)),
-          gen_tcp:send(Sock, ws_framing:buildMsg(text,R)),
-          client_loop(Sock, HS);
-        true ->
-          gen_tcp:send(Sock, ws_handshake:handshake(B)),
-          client_loop(Sock, 1)
+    {ok, Packet} ->
+      gen_tcp:send(Sock, ws_handshake:handshake(Packet));
+    {error, closed} ->
+      throw(connclosed);
+    {error,_} ->
+      throw(connerr)
+  end.
+
+ws_send(Sock, Type, Content) ->
+  gen_tcp:send(Sock, ws_framing:buildMsg(Type, Content)).
+
+ws_recv(Sock) ->
+    rcv(Sock, [], undefined).
+
+rcv(Sock, Acc, Type) ->
+  case gen_tcp:recv(Sock, 0) of
+    {ok, Packet} ->
+      case ws_framing:parseMsg(Packet) of
+        {fragment, {Type,Con}} ->
+            rcv(Sock, Acc++Con, Type);
+        {complete, {ping, Con}} ->
+            gen_tcp:send(Sock, ws_framing:buildMsg(pong, Con)),
+            rcv(Sock, [], undefined);
+        {complete, {pong, _}} ->
+            rcv(Sock, [], undefined);
+        {complete, {cont, Con}} ->
+          {complete, {Type, Acc++Con}};
+        {complete, P} ->
+          P
       end;
     {error, closed} ->
-      ok = gen_tcp:close(Sock)
+      throw(connclosed);
+    {error,_} ->
+      throw(connerr)
   end.

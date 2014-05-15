@@ -9,7 +9,8 @@ get(Offset, Len, Str) ->
 	get(0,Len, Rest).
 
 
-parseMsg(Bin) ->
+parseMsg(Str) ->
+	Bin = list_to_binary(Str),
 	WSFin = get(0,1,Bin),
 	if
 		WSFin == 1 ->
@@ -30,7 +31,10 @@ parseMsg(Bin) ->
 		WSOpCode == 9 ->
 			Type = ping;
 		WSOpCode == 10 ->
-			Type = pong
+			Type = pong;
+		true ->
+			Type = error,
+			throw(error)
 	end,
 	WSMask = get(8,1, Bin),
 	LenTest = get(9,7, Bin),
@@ -39,10 +43,10 @@ parseMsg(Bin) ->
 			WSLength = LenTest,
 			LenOffset = 0;
 		LenTest == 126 ->
-			WSLength = get(9,7+16, Bin),
+			WSLength = get(9+7,16, Bin),
 			LenOffset = 16;
 		LenTest == 127 ->
-			WSLength = get(9,7+64, Bin),
+			WSLength = get(9+7,64, Bin),
 			LenOffset = 64
 	end,
 	WSMask = get(8,1, Bin),
@@ -52,7 +56,7 @@ parseMsg(Bin) ->
 		true ->
 			Msg = readPayload(WSLength, 0, 0, 16+LenOffset, Bin, [])
 	end,
-	{Fin, Type, Msg}.
+	{Fin, {Type, Msg}}.
 
 readPayload(Len,I, _, _, _, Dec) when I == Len -> Dec;
 readPayload(Len,I, 0, PayloadOffset, Bin, Dec) ->
@@ -68,7 +72,15 @@ buildMsg(Type, Content) ->
 	BCon = list_to_binary(Content),
 	case Type of
 		text ->
-			OType = 1
+			OType = 1;
+		binary ->
+			OType = 2;
+		close ->
+			OType = 8;
+		ping ->
+			OType = 9;
+		pong ->
+			OType = 10
 	end,
 	Len = length(Content),
 	if
