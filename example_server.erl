@@ -1,5 +1,5 @@
 -module(example_server).
--export([start/0]).
+-export([start/0, client_loop/1]).
 
 
 start() ->
@@ -11,7 +11,7 @@ server_loop(LSock) ->
   {ok, Sock} = gen_tcp:accept(LSock),
   try ws:ws_init(Sock) of
     ok ->
-      client_loop(Sock),
+      spawn(?MODULE, client_loop, [Sock]),
       server_loop(LSock)
   catch
     _ ->
