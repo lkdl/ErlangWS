@@ -4,16 +4,14 @@
 ws_init(Sock) ->
   case gen_tcp:recv(Sock, 0) of
     {ok, Packet} ->
-      Rsp =
-        try ws_handshake:handshake(Packet) of
-          R ->
-            R
-        catch
-          error ->
-            throw(error)
-        end,
-        gen_tcp:send(Sock, Rsp),
-        ok;
+      try ws_handshake:handshake(Packet) of
+        R ->
+          gen_tcp:send(Sock, R),
+          ok
+      catch
+        error ->
+          throw(error)
+      end;
     {error, closed} ->
       throw(closed);
     {error,_} ->
@@ -43,7 +41,7 @@ rcv(Sock, Acc, Type) ->
           P
       end;
     {error, closed} ->
-      throw(connclosed);
+      error;
     {error,_} ->
-      throw(connerr)
+      error
   end.
