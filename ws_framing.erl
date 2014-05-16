@@ -80,7 +80,10 @@ buildMsg(Type, Content) ->
 		ping ->
 			OType = 9;
 		pong ->
-			OType = 10
+			OType = 10;
+		_ ->
+			OType = -1,
+			throw(error)
 	end,
 	Len = length(Content),
 	if

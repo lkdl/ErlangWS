@@ -40,6 +40,14 @@ getKeyHeader(Bin) ->
   end.
 
 handshake(Bin) ->
-  RespKey = respKey(getKey(Bin)),
+  Key = try getKey(Bin) of
+    K ->
+      K
+  catch
+    _ ->
+      throw(error)
+  end,
+  RespKey = respKey(Key),
   P = string:concat("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept:", RespKey),
-  string:concat(P, "\r\n\r\n").
+  string:concat(P, "\r\n\r\n"),
+  ok.

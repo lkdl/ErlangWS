@@ -4,11 +4,20 @@
 ws_init(Sock) ->
   case gen_tcp:recv(Sock, 0) of
     {ok, Packet} ->
-      gen_tcp:send(Sock, ws_handshake:handshake(Packet));
+      Rsp =
+        try ws_handshake:handshake(Packet) of
+          R ->
+            R
+        catch
+          error ->
+            throw(error)
+        end,
+        gen_tcp:send(Sock, Rsp),
+        ok;
     {error, closed} ->
-      throw(connclosed);
+      throw(closed);
     {error,_} ->
-      throw(connerr)
+      throw(error)
   end.
 
 ws_send(Sock, Type, Content) ->
