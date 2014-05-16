@@ -3,8 +3,8 @@
 
 
 start() ->
-  io:format("Server started!~n"),
   {ok, LSock} = gen_tcp:listen(5678, [list, {packet, 0},{active, false}]),
+  io:format("Server started!~n"),
   server_loop(LSock).
 
 server_loop(LSock) ->
@@ -14,7 +14,8 @@ server_loop(LSock) ->
       spawn(?MODULE, client_loop, [Sock]),
       server_loop(LSock)
   catch
-    _ ->
+    error ->
+      gen_tcp:close(Sock),
       server_loop(LSock)
   end.
 
@@ -26,8 +27,9 @@ client_loop(Sock) ->
     {text, Con} ->
       ws:ws_send(Sock, text, Con),
       client_loop(Sock);
-    What ->
-      io:format("~w", [What]),
+    error ->
+      client_loop(Sock);
+    _ ->
       ws:ws_send(Sock, text, "I don't think we should see each other anymore. It just doesn't work... :("),
       client_loop(Sock)
   end.
