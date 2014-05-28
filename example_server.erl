@@ -21,7 +21,7 @@ server_loop(LSock) ->
 
 
 client_loop(Sock) ->
-  case ws:ws_recv(Sock) of
+  case ws:ws_receive(Sock) of
     {close, _} ->
       gen_tcp:close(Sock);
     {text, Con} ->
